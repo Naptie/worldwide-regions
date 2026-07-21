@@ -1,0 +1,7 @@
+node_modules/
+data/
+dist/
+output/
+resources/canonical-labels.json
+*.log
+.DS_Store

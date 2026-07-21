@@ -1,0 +1,41 @@
+{
+  "name": "worldwide-regions",
+  "version": "1.0.0",
+  "description": "Worldwide Region Hierarchy ETL pipeline — merges administrative boundaries with PRC compliance and Wikidata enrichment",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "sample": "node dist/index.js --sample",
+    "dev": "tsx src/index.ts",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "test": "pnpm build && node --test dist/**/*.test.js",
+    "build:canonical-labels": "tsx scripts/build-canonical-labels.ts",
+    "build:wikidata-cache": "tsx scripts/build-wikidata-cache.ts",
+    "fl": "prettier --write . && eslint . --fix"
+  },
+  "dependencies": {
+    "bson": "^6.10.0",
+    "mongodb": "^7.5.0",
+    "opencc-js": "^1.4.1",
+    "pinyin-pro": "^3.28.1"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^2.1.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.64.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@11.13.1+sha512.b2fc7683b8a6525414e7d13e1ba28caaddde96bf66ec540bfaeb7e702b81f3e0be4d1f295edf7f9fe0396740a8dce4509c582ddf79891f4543fea32d37645f25"
+}

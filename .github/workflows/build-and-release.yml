@@ -1,0 +1,90 @@
+name: Build and Release
+
+on:
+  workflow_run:
+    workflows: ['Build Wikidata Cache']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download Wikidata cache
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build-cache.yml
+          name: wikidata-cache
+          path: data/
+          search_artifacts: true
+          if_no_artifact_found: warn
+
+      - name: Download canonical labels
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build-cache.yml
+          name: canonical-labels
+          path: resources/
+          search_artifacts: true
+          if_no_artifact_found: warn
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile TypeScript
+        run: pnpm build
+
+      - name: Run ETL pipeline
+        run: pnpm start
+
+      - name: Import to MongoDB
+        run: npx tsx scripts/import-regions.ts
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+
+      - name: Compute release tag with sequence number
+        id: tag
+        run: |
+          MONTH="$(date +'%Y-%m')"
+          PREFIX="data-${MONTH}"
+          COUNT=$(gh release list --json tagName --jq "[.[].tagName | select(startswith(\"${PREFIX}-\"))] | length" || echo 0)
+          if gh release view "${PREFIX}" --json tagName &>/dev/null 2>&1; then
+            COUNT=$((COUNT + 1))
+          fi
+          NEXT=$((COUNT + 1))
+          TAG="${PREFIX}-${NEXT}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "month=${MONTH}" >> "$GITHUB_OUTPUT"
+          echo "seq=${NEXT}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: '全球地区数据收集 - ${{ steps.tag.outputs.month }} #${{ steps.tag.outputs.seq }}'
+          tag_name: '${{ steps.tag.outputs.tag }}'
+          generate_release_notes: true
+          files: |
+            output/regions-hierarchical.json
+            output/regions-flat.csv
+            output/regions-flat.bson
+            output/place-selector-hierarchy.json
