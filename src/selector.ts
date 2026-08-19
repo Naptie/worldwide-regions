@@ -17,7 +17,7 @@ export function createSelectorRegions(regions: PipelineRegion[]): SelectorRegion
     if (region._settlementType !== undefined) return region.level === 'city';
     return (
       isChinaAdministrativeRegion(region, byId) &&
-      (region.level === 'city' || region.level === 'county')
+      (region.level === 'city' || region.level === 'county' || region.level === 'street')
     );
   });
 
@@ -31,7 +31,7 @@ function isChinaAdministrativeRegion(
   byId: Map<string, PipelineRegion>
 ): boolean {
   let current: PipelineRegion | undefined = region;
-  for (let depth = 0; current && depth < 4; depth++) {
+  for (let depth = 0; current && depth < 5; depth++) {
     if (current.id === 'CN') return true;
     current = current.parentId ? byId.get(current.parentId) : undefined;
   }
@@ -41,7 +41,7 @@ function isChinaAdministrativeRegion(
 function selectorKind(region: PipelineRegion): SelectorKind {
   if (region.level === 'country') return 'country';
   if (region.level === 'province') return 'admin_region';
-  if (region.level === 'county') return 'district';
+  if (region.level === 'county' || region.level === 'street') return 'district';
   return 'settlement';
 }
 

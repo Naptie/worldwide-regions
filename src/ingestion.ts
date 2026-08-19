@@ -23,6 +23,7 @@ const MODOOD_CACHE = {
   provinces: join(SOURCE_CACHE_DIR, 'modood-provinces.json'),
   cities: join(SOURCE_CACHE_DIR, 'modood-cities.json'),
   areas: join(SOURCE_CACHE_DIR, 'modood-areas.json'),
+  streets: join(SOURCE_CACHE_DIR, 'modood-streets.json'),
   territories: join(SOURCE_CACHE_DIR, 'modood-hk-mo-tw.json')
 };
 const DR5HN_CACHE = {
@@ -183,6 +184,20 @@ async function ingestChina(): Promise<PipelineRegion[]> {
     regions.push(r);
   }
 
+  type ModoodStreet = { code: string; name: string; areaCode: string; cityCode: string };
+  const streets = await fetchJson<Record<string, ModoodStreet>>(
+    `${MODOOD_BASE}/streets.json`,
+    MODOOD_CACHE.streets
+  );
+  const regionIds = new Set(regions.map((r) => r.id));
+  for (const entry of Object.values(streets)) {
+    const parentId = `CN-${entry.areaCode}`;
+    if (!regionIds.has(parentId)) continue;
+    const r = createRegion(`CN-${entry.code}`, parentId, 'street', entry.name);
+    r.name.zh = entry.name;
+    regions.push(r);
+  }
+
   const sarProvinceMap: Record<string, string> = {
     香港特别行政区: '81',
     澳门特别行政区: '82',
@@ -231,7 +246,7 @@ async function ingestChina(): Promise<PipelineRegion[]> {
   regions.push(...filtered);
 
   console.log(
-    `  China: 1 country + ${regions.filter((r) => r.level === 'province').length} provinces + ${regions.filter((r) => r.level === 'city').length} cities + ${regions.filter((r) => r.level === 'county').length} counties = ${regions.length} total`
+    `  China: 1 country + ${regions.filter((r) => r.level === 'province').length} provinces + ${regions.filter((r) => r.level === 'city').length} cities + ${regions.filter((r) => r.level === 'county').length} counties + ${regions.filter((r) => r.level === 'street').length} streets = ${regions.length} total`
   );
   return regions;
 }

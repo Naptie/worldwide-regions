@@ -73,6 +73,7 @@ async function main(): Promise<void> {
     console.log(`  Provinces: ${normalized.regions.filter((r) => r.level === 'province').length}`);
     console.log(`  Cities:    ${normalized.regions.filter((r) => r.level === 'city').length}`);
     console.log(`  Counties:  ${normalized.regions.filter((r) => r.level === 'county').length}`);
+    console.log(`  Streets:   ${normalized.regions.filter((r) => r.level === 'street').length}`);
     console.log(`  Elapsed:   ${elapsed}s`);
     console.log(`  Output:`);
     console.log(`    JSON: ${jsonPath}`);

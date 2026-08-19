@@ -57,14 +57,14 @@ try {
   console.log(`Imported ${count} documents into ${DB}.${COLLECTION}`);
 
   const indexes = [
+    { key: { id: 1 } },
     { key: { level: 1 } },
-    { key: { parentId: 1 } },
-    { key: { _wikidataQid: 1 }, sparse: true }
+    { key: { parentId: 1 } }
   ];
   for (const idx of indexes) {
     await coll.createIndex(idx.key, { ...idx, background: true } as never);
   }
-  console.log('Created indexes: level, parentId, _wikidataQid');
+  console.log('Created indexes: id, level, parentId');
 
   const sample = await coll.findOne({ level: 'country' });
   const name = sample?.name as Record<string, string> | undefined;

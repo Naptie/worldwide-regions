@@ -1,6 +1,6 @@
 // ── Production Region Schema ─────────────────────────────────────
 
-export type RegionLevel = 'country' | 'province' | 'city' | 'county';
+export type RegionLevel = 'country' | 'province' | 'city' | 'county' | 'street';
 
 export interface GeoPoint {
   type: 'Point';
