@@ -25,10 +25,15 @@ let offset = 0;
 while (offset + 4 <= buffer.length) {
   const size = buffer.readInt32LE(offset);
   if (size <= 0 || offset + size > buffer.length) {
-    console.warn(`Skipping ${buffer.length - offset} trailing bytes at offset ${offset} (size=${size})`);
+    console.warn(
+      `Skipping ${buffer.length - offset} trailing bytes at offset ${offset} (size=${size})`
+    );
     break;
   }
-  const doc = BSON.deserialize(Buffer.from(buffer.subarray(offset, offset + size))) as Record<string, unknown>;
+  const doc = BSON.deserialize(Buffer.from(buffer.subarray(offset, offset + size))) as Record<
+    string,
+    unknown
+  >;
   documents.push(doc);
   offset += size;
 }
@@ -56,11 +61,7 @@ try {
   const count = await coll.countDocuments();
   console.log(`Imported ${count} documents into ${DB}.${COLLECTION}`);
 
-  const indexes = [
-    { key: { id: 1 } },
-    { key: { level: 1 } },
-    { key: { parentId: 1 } }
-  ];
+  const indexes = [{ key: { id: 1 } }, { key: { level: 1 } }, { key: { parentId: 1 } }];
   for (const idx of indexes) {
     await coll.createIndex(idx.key, { ...idx, background: true } as never);
   }

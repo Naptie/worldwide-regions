@@ -38,9 +38,9 @@ const ROOT_QIDS: Record<string, string> = {
 };
 
 const PROVINCE_MAP: Record<string, { code: string; name: string }> = {
-  '台湾省': { code: '71', name: '台湾省' },
-  '香港特别行政区': { code: '81', name: '香港特别行政区' },
-  '澳门特别行政区': { code: '82', name: '澳门特别行政区' }
+  台湾省: { code: '71', name: '台湾省' },
+  香港特别行政区: { code: '81', name: '香港特别行政区' },
+  澳门特别行政区: { code: '82', name: '澳门特别行政区' }
 };
 
 const normalize = (value: string): string =>
@@ -60,9 +60,7 @@ async function fetchJson<T>(url: string, retries = 3): Promise<T> {
   throw new Error('unreachable');
 }
 
-function buildSourceHierarchy(
-  hkMoTW: Record<string, Record<string, string[]>>
-): SourceNode[] {
+function buildSourceHierarchy(hkMoTW: Record<string, Record<string, string[]>>): SourceNode[] {
   const roots: SourceNode[] = [];
 
   for (const [provName, { code, name }] of Object.entries(PROVINCE_MAP)) {
@@ -131,6 +129,7 @@ async function queryDescendants(rootQid: string, retries = 4): Promise<WikidataC
       });
       if (!response.ok) throw new Error(`WDQS ${response.status}: ${await response.text()}`);
       const raw = await response.text();
+      // eslint-disable-next-line no-control-regex
       const clean = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
       const json = JSON.parse(clean) as {
         results: { bindings: Record<string, { value: string }>[] };

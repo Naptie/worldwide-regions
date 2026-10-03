@@ -1,7 +1,10 @@
 import { MongoClient } from 'mongodb';
 
 const uri = process.env.MONGO_URI;
-if (!uri) { console.error('[FATAL] MONGO_URI not set'); process.exit(1); }
+if (!uri) {
+  console.error('[FATAL] MONGO_URI not set');
+  process.exit(1);
+}
 
 async function main() {
   const c = new MongoClient(uri);
@@ -12,8 +15,10 @@ async function main() {
 
     // Get all field names from both collections
     const fieldSet = new Set<string>();
-    for await (const doc of prep.find().limit(1000)) for (const k of Object.keys(doc)) fieldSet.add(k);
-    for await (const doc of dev.find().limit(1000)) for (const k of Object.keys(doc)) fieldSet.add(k);
+    for await (const doc of prep.find().limit(1000))
+      for (const k of Object.keys(doc)) fieldSet.add(k);
+    for await (const doc of dev.find().limit(1000))
+      for (const k of Object.keys(doc)) fieldSet.add(k);
     console.log('All fields found:', [...fieldSet].sort());
 
     // Check _nameSources, _wikidataQid, _enrichmentMatch, _settlementType, _adminType

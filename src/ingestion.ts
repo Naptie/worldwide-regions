@@ -97,6 +97,89 @@ export function isSelectableSettlementType(type: string | undefined): boolean {
   return type === undefined || !EXCLUDED_SETTLEMENT_TYPES.has(type.toLowerCase());
 }
 
+// ── Same-place duplicate filings ─────────────────────────────────────────
+// dr5hn files many settlements twice (same wikiDataId, same country) under two
+// different states, one of them geographically implausible: Baguio under both
+// Camarines Norte (~340 km off) and Cordillera Administrative Region, Malolos
+// under both Agusan del Sur (~900 km off) and Central Luzon. Measured on the
+// October 2026 source: PH has 1,224 such duplicate-QID groups; the rule below
+// drops the 959 implausible filings there. Worldwide the same defect affects
+// ~8,200 records — widen PLAUSIBILITY_DEDUPE_COUNTRIES only after auditing
+// shop references (nearcade hard-references region IDs).
+
+/** Countries whose same-QID duplicate filings get plausibility-filtered. */
+export const PLAUSIBILITY_DEDUPE_COUNTRIES = new Set(['PH']);
+/** A filing whose parent-state centroid is farther than this is suspect. */
+const IMPLAUSIBLE_PARENT_KM = 100;
+/** ...unless a same-QID sibling filing beats it by at least this margin. */
+const SIBLING_ADVANTAGE_KM = 50;
+
+interface DedupeSettlement {
+  country_code: string;
+  state_id: number;
+  latitude: string;
+  longitude: string;
+  wikiDataId?: string;
+}
+
+function haversineKm(lonA: number, latA: number, lonB: number, latB: number): number {
+  const rad = Math.PI / 180;
+  const latitudeDelta = (latB - latA) * rad;
+  const longitudeDelta = (lonB - lonA) * rad;
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(latA * rad) * Math.cos(latB * rad) * Math.sin(longitudeDelta / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Drop settlement records that share a wikiDataId with a same-country record
+ * whose parent state is geographically far more plausible. Settles the
+ * "which of the two Baguios is real" class of defects generically instead of
+ * by hardcoded ID, so future dr5hn re-filings stay filtered.
+ */
+export function filterImplausibleParentDuplicates<T extends DedupeSettlement>(
+  settlements: T[],
+  stateCentroids: Map<number, [number, number]>
+): { kept: T[]; dropped: T[] } {
+  const groups = new Map<string, T[]>();
+  for (const settlement of settlements) {
+    if (!settlement.wikiDataId) continue;
+    if (!PLAUSIBILITY_DEDUPE_COUNTRIES.has(settlement.country_code)) continue;
+    const key = `${settlement.country_code}|${settlement.wikiDataId}`;
+    const group = groups.get(key) ?? [];
+    group.push(settlement);
+    groups.set(key, group);
+  }
+
+  const dropped = new Set<T>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const distanceToParent = (settlement: T): number | null => {
+      const centroid = stateCentroids.get(settlement.state_id);
+      if (!centroid) return null;
+      return haversineKm(
+        parseFloat(settlement.longitude),
+        parseFloat(settlement.latitude),
+        centroid[0],
+        centroid[1]
+      );
+    };
+    for (const settlement of group) {
+      const distance = distanceToParent(settlement);
+      if (distance === null || distance <= IMPLAUSIBLE_PARENT_KM) continue;
+      const betterSibling = group.some((other) => {
+        if (other === settlement) return false;
+        const otherDistance = distanceToParent(other);
+        return otherDistance !== null && otherDistance < distance - SIBLING_ADVANTAGE_KM;
+      });
+      if (betterSibling) dropped.add(settlement);
+    }
+  }
+
+  return { kept: settlements.filter((s) => !dropped.has(s)), dropped: [...dropped] };
+}
+
 // ── fetch helpers ──
 async function fetchJson<T>(url: string, cachePath: string, retries = 3): Promise<T> {
   const label = url.split('/').slice(-2).join('/');
@@ -254,11 +337,29 @@ async function ingestChina(): Promise<PipelineRegion[]> {
 // ── RoW ingestion ──
 async function ingestRestOfWorld(): Promise<PipelineRegion[]> {
   console.log('  Fetching RoW data from dr5hn/countries-states-cities-database...');
-  const [countries, states, settlements] = await Promise.all([
+  const [countries, states, settlementsRaw] = await Promise.all([
     fetchJson<Dr5hnCountry[]>(`${DR5HN_BASE}/countries.json`, DR5HN_CACHE.countries),
     fetchJson<Dr5hnState[]>(`${DR5HN_BASE}/states.json`, DR5HN_CACHE.states),
     fetchGzipJson<Dr5hnSettlement[]>(DR5HN_CITIES_URL, DR5HN_CITIES_CACHE)
   ]);
+
+  const stateCentroids = new Map<number, [number, number]>();
+  for (const state of states) {
+    if (state.latitude && state.longitude)
+      stateCentroids.set(state.id, [parseFloat(state.longitude), parseFloat(state.latitude)]);
+  }
+  const { kept: settlements, dropped: implausibleDuplicates } = filterImplausibleParentDuplicates(
+    settlementsRaw,
+    stateCentroids
+  );
+  if (implausibleDuplicates.length > 0) {
+    console.log(
+      `  Dropped ${implausibleDuplicates.length} implausible duplicate filings: ${implausibleDuplicates
+        .slice(0, 5)
+        .map((s) => `${s.country_code}:${s.id} ${s.name}`)
+        .join(', ')}${implausibleDuplicates.length > 5 ? '…' : ''}`
+    );
+  }
 
   const regions: PipelineRegion[] = [];
   const stateIdBySourceId = new Map<number, string>();

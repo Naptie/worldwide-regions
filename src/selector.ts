@@ -13,6 +13,9 @@ export interface SelectorRegion extends PipelineRegion {
 export function createSelectorRegions(regions: PipelineRegion[]): SelectorRegion[] {
   const byId = new Map(regions.map((region) => [region.id, region]));
   const selected = regions.filter((region) => {
+    // Non-selectable regions (e.g. the Singapore capital leaf, co-extensive
+    // with its own country) must not appear as picker leaves at all.
+    if (region.selectable === false) return false;
     if (region.level === 'country' || region.level === 'province') return true;
     if (region._settlementType !== undefined) return region.level === 'city';
     return (

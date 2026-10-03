@@ -135,74 +135,76 @@ async function fetchJson<T>(url: string, cachePath: string): Promise<T> {
 }
 
 async function main() {
-const client = new MongoClient(URI, { appName: 'worldwide-regions-patch-streets' });
-await client.connect();
-try {
-  const db = client.db(DB);
-  const coll = db.collection('regions');
+  const client = new MongoClient(URI, { appName: 'worldwide-regions-patch-streets' });
+  await client.connect();
+  try {
+    const db = client.db(DB);
+    const coll = db.collection('regions');
 
-  const sample = await coll.findOne({ level: 'county' }, { projection: { _id: 0 } });
-  console.log('Sample county doc in DB:', JSON.stringify(sample, null, 2));
+    const sample = await coll.findOne({ level: 'county' }, { projection: { _id: 0 } });
+    console.log('Sample county doc in DB:', JSON.stringify(sample, null, 2));
 
-  console.log('Fetching streets.json...');
-  const streets = Object.values(
-    await fetchJson<Record<string, ModoodStreet>>(`${MODOOD_BASE}/streets.json`, STREETS_CACHE)
-  ).filter((s) => CITY_CODES.includes(s.cityCode));
-  console.log(`  ${streets.length} streets in the 4 target cities`);
+    console.log('Fetching streets.json...');
+    const streets = Object.values(
+      await fetchJson<Record<string, ModoodStreet>>(`${MODOOD_BASE}/streets.json`, STREETS_CACHE)
+    ).filter((s) => CITY_CODES.includes(s.cityCode));
+    console.log(`  ${streets.length} streets in the 4 target cities`);
 
-  const ids = streets.map((s) => `CN-${s.code}`);
-  const existing = new Set(await coll.distinct('id', { id: { $in: ids } }));
-  const missing = streets.filter((s) => !existing.has(`CN-${s.code}`));
-  console.log(`  ${existing.size} already present, ${missing.length} to insert`);
+    const ids = streets.map((s) => `CN-${s.code}`);
+    const existing = new Set(await coll.distinct('id', { id: { $in: ids } }));
+    const missing = streets.filter((s) => !existing.has(`CN-${s.code}`));
+    console.log(`  ${existing.size} already present, ${missing.length} to insert`);
 
-  const candidateParents = new Set(missing.map((s) => `CN-${s.areaCode}`));
-  const existingParents = new Set(
-    await coll.distinct('id', { id: { $in: [...candidateParents] } })
-  );
+    const candidateParents = new Set(missing.map((s) => `CN-${s.areaCode}`));
+    const existingParents = new Set(
+      await coll.distinct('id', { id: { $in: [...candidateParents] } })
+    );
 
-  const docs = missing.map((s) => {
-    const parentId = existingParents.has(`CN-${s.areaCode}`) ? `CN-${s.areaCode}` : `CN-${s.cityCode}`;
-    const en = EN_NAMES[s.code];
-    if (!en) console.warn(`  [WARN] No English name for ${s.code} (${s.name}), using zh as en`);
-    return {
-      id: `CN-${s.code}`,
-      parentId,
-      level: 'street',
-      name: {
-        en: en ?? s.name,
-        zh: s.name,
-        ja: toJapaneseShinjitai(s.name)
-      },
-      population: null,
-      area: null,
-      location: null
-    };
-  });
+    const docs = missing.map((s) => {
+      const parentId = existingParents.has(`CN-${s.areaCode}`)
+        ? `CN-${s.areaCode}`
+        : `CN-${s.cityCode}`;
+      const en = EN_NAMES[s.code];
+      if (!en) console.warn(`  [WARN] No English name for ${s.code} (${s.name}), using zh as en`);
+      return {
+        id: `CN-${s.code}`,
+        parentId,
+        level: 'street',
+        name: {
+          en: en ?? s.name,
+          zh: s.name,
+          ja: toJapaneseShinjitai(s.name)
+        },
+        population: null,
+        area: null,
+        location: null
+      };
+    });
 
-  for (const d of docs) {
-    console.log(`  ${d.id} ${d.name.zh} -> ${d.parentId} | en: ${d.name.en} | ja: ${d.name.ja}`);
-  }
-
-  if (docs.length === 0) {
-    console.log('Nothing to insert.');
-  } else {
-    const BATCH = 500;
-    for (let i = 0; i < docs.length; i += BATCH) {
-      const batch = docs.slice(i, i + BATCH);
-      await coll.insertMany(batch, { ordered: false });
-      console.log(`  Inserted ${i + batch.length}/${docs.length}`);
-    }
-
-    const perCity = new Map<string, number>();
     for (const d of docs) {
-      const city = d.parentId;
-      perCity.set(city, (perCity.get(city) ?? 0) + 1);
+      console.log(`  ${d.id} ${d.name.zh} -> ${d.parentId} | en: ${d.name.en} | ja: ${d.name.ja}`);
     }
-    console.log('Inserted per parent:', Object.fromEntries(perCity));
-    console.log(`Done: ${docs.length} streets into ${DB}.regions`);
+
+    if (docs.length === 0) {
+      console.log('Nothing to insert.');
+    } else {
+      const BATCH = 500;
+      for (let i = 0; i < docs.length; i += BATCH) {
+        const batch = docs.slice(i, i + BATCH);
+        await coll.insertMany(batch, { ordered: false });
+        console.log(`  Inserted ${i + batch.length}/${docs.length}`);
+      }
+
+      const perCity = new Map<string, number>();
+      for (const d of docs) {
+        const city = d.parentId;
+        perCity.set(city, (perCity.get(city) ?? 0) + 1);
+      }
+      console.log('Inserted per parent:', Object.fromEntries(perCity));
+      console.log(`Done: ${docs.length} streets into ${DB}.regions`);
+    }
+  } finally {
+    await client.close();
   }
-} finally {
-  await client.close();
-}
 }
 main();

@@ -55,6 +55,21 @@ jobs:
       - name: Run ETL pipeline
         run: pnpm start
 
+      - name: Download previous release for regression check
+        run: |
+          PREV_TAG="$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || true)"
+          if [ -n "$PREV_TAG" ]; then
+            echo "Comparing against previous release: $PREV_TAG"
+            gh release download "$PREV_TAG" --pattern 'regions-flat.bson' --dir tmp/prev-release
+          else
+            echo "No previous release published yet — regression check will be skipped"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check region ID regressions
+        run: npx tsx scripts/check-release-regression.ts output/regions-flat.bson tmp/prev-release/regions-flat.bson
+
       - name: Import to MongoDB
         run: npx tsx scripts/import-regions.ts
         env:

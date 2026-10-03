@@ -14,6 +14,7 @@ import { serializeAll } from './serialize.js';
 import { completeChinaLocalization } from './localization.js';
 import { normalizeRegions } from './normalize.js';
 import { addCachedSelectorPlaces } from './cached-selector-places.js';
+import { applyDataOverrides } from './data-overrides.js';
 import type { PipelineRegion } from './types.js';
 
 const IS_SAMPLE = process.argv.includes('--sample');
@@ -26,6 +27,16 @@ async function main(): Promise<void> {
 
   try {
     const { china, row } = await ingestAll(IS_SAMPLE);
+
+    // ── Phase 1.5: Verified data overrides ─────────────────────
+    const overrideReport = applyDataOverrides([...china, ...row]);
+    console.log(
+      `\n── Phase 1.5: Data Overrides ──────────────────────\n` +
+        `  Overrides applied: ${overrideReport.overridesApplied}, non-selectable marked: ${overrideReport.nonSelectableMarked}`
+    );
+    for (const stale of overrideReport.skippedStale) {
+      console.warn(`  [WARN] Stale override skipped — re-review REGION_OVERRIDES: ${stale}`);
+    }
 
     // ── Phase 2: Geopolitical Compliance ────────────────────────
     console.log('\n── Phase 2: Geopolitical Compliance ───────────────');

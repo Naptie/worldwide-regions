@@ -20,10 +20,11 @@ interface ProductionRegion {
   population: number | null;
   area: number | null;
   location: { type: 'Point'; coordinates: [number, number] } | null;
+  selectable?: false;
 }
 
 function toProduction(node: PipelineRegion): ProductionRegion {
-  return {
+  const region: ProductionRegion = {
     id: node.id,
     parentId: node.parentId,
     level: node.level,
@@ -32,6 +33,8 @@ function toProduction(node: PipelineRegion): ProductionRegion {
     area: node.area,
     location: node.location
   };
+  if (node.selectable === false) region.selectable = false;
+  return region;
 }
 
 // ── hierarchical JSON ──

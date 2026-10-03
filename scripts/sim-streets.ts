@@ -5,7 +5,11 @@ import { createSelectorRegions } from '../dist/selector.js';
 
 async function main() {
   const { china } = await ingestAll();
-  try { completeChinaLocalization(china); } catch {} // needs wikidata cache; not part of this check
+  try {
+    completeChinaLocalization(china);
+  } catch {
+    // needs wikidata cache; not part of this check
+  }
   const { regions } = normalizeRegions(china);
   const byId = new Map(regions.map((r) => [r.id, r]));
   const childrenOf = (id: string) => regions.filter((r) => r.parentId === id);

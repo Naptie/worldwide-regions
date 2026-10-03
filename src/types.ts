@@ -17,6 +17,9 @@ export interface Region {
   population: number | null;
   area: number | null;
   location: GeoPoint | null;
+  /** Emitted only when false: the region must never be offered as a selectable
+   *  leaf (e.g. a settlement co-extensive with its own country). Absent = selectable. */
+  selectable?: false;
 }
 
 // ── Pipeline-only enrichment fields ──────────────────────────────
