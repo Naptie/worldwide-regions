@@ -20,6 +20,22 @@ test('reparents Kent Margate away from Tower Hamlets', () => {
   assert.deepEqual(report.skippedStale, []);
 });
 
+test('reparents the UK seaside misfilings to their true counties', () => {
+  const towns = [
+    regionWith('GB:50297', 'GB-SOS', 'Leysdown-on-Sea'),
+    regionWith('GB:48950', 'GB-HNS', 'Chertsey'),
+    regionWith('GB:51398', 'GB-IOS', 'St Ives'),
+    regionWith('GB:51742', 'GB-SFK', 'Walton-on-the-Naze')
+  ];
+  const report = applyDataOverrides(towns);
+
+  assert.equal(towns[0].parentId, 'GB-KEN');
+  assert.equal(towns[1].parentId, 'GB-SRY');
+  assert.equal(towns[2].parentId, 'GB-CON');
+  assert.equal(towns[3].parentId, 'GB-ESS');
+  assert.equal(report.overridesApplied, 4);
+});
+
 test('fixes Barceloneta PR coordinates to Puerto Rico', () => {
   const barceloneta = regionWith('PR:153557', 'PR-017', 'Barceloneta');
   applyDataOverrides([barceloneta]);

@@ -28,6 +28,29 @@ export const REGION_OVERRIDES: Record<string, RegionOverride> = {
     parentId: 'GB-KEN',
     reason: 'Margate is in Kent (Wikidata Q618045 P131 = Thanet, Kent), not Tower Hamlets'
   },
+  // The same dr5hn wrong-parent class found while auditing UK seaside arcades:
+  // each record's own coordinates place it in the correct county, so these are
+  // misfilings rather than same-name confusions.
+  'GB:50297': {
+    expectName: 'Leysdown-on-Sea',
+    parentId: 'GB-KEN',
+    reason: 'Leysdown-on-Sea is on the Isle of Sheppey, Kent (0.92,51.40) — not Southend-on-Sea'
+  },
+  'GB:48950': {
+    expectName: 'Chertsey',
+    parentId: 'GB-SRY',
+    reason: 'Chertsey is in Runnymede, Surrey (-0.51,51.39) — not Hounslow'
+  },
+  'GB:51398': {
+    expectName: 'St Ives',
+    parentId: 'GB-CON',
+    reason: 'St Ives is the Cornwall coastal town (-5.49,50.21) — not the Isles of Scilly'
+  },
+  'GB:51742': {
+    expectName: 'Walton-on-the-Naze',
+    parentId: 'GB-ESS',
+    reason: 'Walton-on-the-Naze is in Tendring, Essex (1.27,51.85) — not Suffolk'
+  },
   // dr5hn stores Barcelona, Spain coordinates on Barceloneta, Puerto Rico
   // (lat/lon belong to the wrong continent); the record is otherwise correct
   // (parent PR-017 Barceloneta municipality).
