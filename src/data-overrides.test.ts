@@ -53,6 +53,20 @@ test('marks the Singapore capital leaf non-selectable', () => {
   assert.equal(report.nonSelectableMarked, 1);
 });
 
+test('fixes the three CN counties whose enriched coordinates are wrong', () => {
+  const counties = [
+    regionWith('CN-360783', 'CN-3607', 'Longnan'),
+    regionWith('CN-340124', 'CN-3401', 'Lujiang County'),
+    regionWith('CN-450126', 'CN-4501', 'Binyang County')
+  ];
+  const report = applyDataOverrides(counties);
+
+  assert.deepEqual(counties[0].location?.coordinates, [114.804474, 24.901216]);
+  assert.deepEqual(counties[1].location?.coordinates, [117.288165, 31.256978]);
+  assert.deepEqual(counties[2].location?.coordinates, [108.810336, 23.217771]);
+  assert.equal(report.overridesApplied, 3);
+});
+
 test('skips an override when the source record was renamed (stale guard)', () => {
   const margate = regionWith('GB:50496', 'GB-TWH', 'Margate-by-the-Sea');
   const report = applyDataOverrides([margate]);

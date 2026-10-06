@@ -59,6 +59,25 @@ export const REGION_OVERRIDES: Record<string, RegionOverride> = {
     location: { type: 'Point', coordinates: [-66.538611, 18.450556] },
     wikidataQid: 'Q2025087',
     reason: 'source coords are Barcelona, Spain; real location from Wikidata Q2025087'
+  },
+  // Three Chinese counties whose Wikidata-enriched coordinates sit tens to
+  // hundreds of kilometres from the county seat (wrong entity matched or bad
+  // P625). Verified against AMap district centers during the nearcade
+  // addr-audit follow-up; shops in these counties were flagged ~60-110 km off.
+  'CN-360783': {
+    expectName: 'Longnan',
+    location: { type: 'Point', coordinates: [114.804474, 24.901216] },
+    reason: 'Wikidata coords landed ~110 km north of the 龙南市 seat; AMap district center'
+  },
+  'CN-340124': {
+    expectName: 'Lujiang County',
+    location: { type: 'Point', coordinates: [117.288165, 31.256978] },
+    reason: 'Wikidata coords landed on Hefei; AMap district center for 庐江县'
+  },
+  'CN-450126': {
+    expectName: 'Binyang County',
+    location: { type: 'Point', coordinates: [108.810336, 23.217771] },
+    reason: 'Wikidata coords landed on Nanning; AMap district center for 宾阳县'
   }
 };
 
