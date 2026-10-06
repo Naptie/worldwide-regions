@@ -5,3 +5,4 @@ output/
 resources/canonical-labels.json
 *.log
 .DS_Store
+tmp-audit/

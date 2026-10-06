@@ -28,16 +28,6 @@ async function main(): Promise<void> {
   try {
     const { china, row } = await ingestAll(IS_SAMPLE);
 
-    // ── Phase 1.5: Verified data overrides ─────────────────────
-    const overrideReport = applyDataOverrides([...china, ...row]);
-    console.log(
-      `\n── Phase 1.5: Data Overrides ──────────────────────\n` +
-        `  Overrides applied: ${overrideReport.overridesApplied}, non-selectable marked: ${overrideReport.nonSelectableMarked}`
-    );
-    for (const stale of overrideReport.skippedStale) {
-      console.warn(`  [WARN] Stale override skipped — re-review REGION_OVERRIDES: ${stale}`);
-    }
-
     // ── Phase 2: Geopolitical Compliance ────────────────────────
     console.log('\n── Phase 2: Geopolitical Compliance ───────────────');
     const { regions: prunedRow, report } = applyCompliancePruning(row);
@@ -60,6 +50,22 @@ async function main(): Promise<void> {
     // ── Phase 3: Wikidata Enrichment ───────────────────────────
     console.log('\n── Phase 3: Wikidata Enrichment ───────────────────');
     const enriched = await enrichRegions(allRegions);
+
+    // ── Phase 3.5: Verified data overrides ─────────────────────
+    // Runs AFTER enrichment on purpose: the p442 match replaces source values,
+    // so an override applied earlier would be overwritten by bad cached
+    // coordinates (e.g. Q1336164's P625 for 龙南市). Enrichment is also the
+    // first step that can drop renamed/absorbed source records, so this is the
+    // first point where every override target has its final identity.
+    const overrideReport = applyDataOverrides(enriched);
+    console.log(
+      `\n── Phase 3.5: Data Overrides ──────────────────────\n` +
+        `  Overrides applied: ${overrideReport.overridesApplied}, non-selectable marked: ${overrideReport.nonSelectableMarked}`
+    );
+    for (const stale of overrideReport.skippedStale) {
+      console.warn(`  [WARN] Stale override skipped — re-review REGION_OVERRIDES: ${stale}`);
+    }
+
     const cachedPlaces = addCachedSelectorPlaces(enriched);
     console.log(`  Added ${cachedPlaces} cached selector places absent from the settlement feed`);
     const localization = completeChinaLocalization(enriched);
