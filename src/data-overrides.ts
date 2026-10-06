@@ -14,6 +14,8 @@ interface RegionOverride {
   parentId?: string;
   location?: GeoPoint;
   wikidataQid?: string;
+  /** Replacement display names, when the source label itself is wrong. */
+  name?: { en: string; zh?: string; ja?: string };
   /** Why the override exists — kept next to the data for future audits. */
   reason: string;
 }
@@ -78,6 +80,15 @@ export const REGION_OVERRIDES: Record<string, RegionOverride> = {
     expectName: 'Binyang County',
     location: { type: 'Point', coordinates: [108.810336, 23.217771] },
     reason: 'Wikidata coords landed on Nanning; AMap district center for 宾阳县'
+  },
+  // dr5hn's 2026-10 refresh labels MA-06 "Fès Meknès" while MA-03 already is
+  // "Fès-Meknès"; every MA-06 child (Casablanca, Mohammedia, Settat, El
+  // Jadida…) belongs to Casablanca-Settat. Wikidata Q19843788: P300 = MA-06.
+  'MA-06': {
+    expectName: 'Fès Meknès',
+    location: { type: 'Point', coordinates: [-7.58333, 33.5333] },
+    name: { en: 'Casablanca-Settat', zh: '卡萨布兰卡-塞塔特大区', ja: 'カサブランカ＝セタット地方' },
+    reason: 'MA-06 is Casablanca-Settat (Wikidata Q19843788 P300=MA-06); dr5hn labeled it like MA-03 Fès-Meknès'
   }
 };
 
@@ -117,6 +128,11 @@ export function applyDataOverrides(regions: PipelineRegion[]): DataOverrideRepor
     if (override.parentId) region.parentId = override.parentId;
     if (override.location) region.location = override.location;
     if (override.wikidataQid) region._wikidataQid = override.wikidataQid;
+    if (override.name) {
+      region.name.en = override.name.en;
+      if (override.name.zh) region.name.zh = override.name.zh;
+      if (override.name.ja) region.name.ja = override.name.ja;
+    }
     report.overridesApplied++;
   }
 
